@@ -6,6 +6,10 @@ using UnityEngine.SceneManagement;
 
 public class CBoard : MonoBehaviour
 {
+    public static int PORTRAIT_MAXIMUM_CARD = 26;
+    public static float PORTRAIT_SPACING = 50f;
+    public static int LANDSCAPE_MAXIMUM_CARD = 13;
+    public static float LANDSCAPE_SPACING = 30f;
     
     #region Fields
 
@@ -50,6 +54,9 @@ public class CBoard : MonoBehaviour
     protected bool m_IsActiveHint = false;
 	protected WaitForSeconds m_WaitShortTime = new WaitForSeconds(2f);
     protected Coroutine m_HintCoroutine;
+
+    // ORIENTATION
+    protected Coroutine m_HandleOrientation;
 
     #endregion
 
@@ -112,10 +119,13 @@ public class CBoard : MonoBehaviour
             this.m_OnBoardCards.Add (card);
         }
         this.m_ReturnBox.Init();
-
         this.m_OnHintCards = new List<CCard>();
         // BLOCK
 		CBoard.BOARD_LOCK = true;
+		// ORIENTATION
+		this.CalculateBaseOrientation(Input.deviceOrientation);
+		var orientationManager = GameObject.FindObjectOfType<CUIOrientation>();
+		orientationManager.OnOrientationChange.AddListener (this.CalculateBaseOrientation);
         // SHUFFLE
         this.ShuffleCards();
         // On START DRAW
@@ -145,10 +155,51 @@ public class CBoard : MonoBehaviour
         }
     }
 
+    public virtual void CalculateBaseOrientation(DeviceOrientation orientation)
+	{
+        if (this.m_HandleOrientation != null)
+            StopCoroutine (this.m_HandleOrientation);
+            
+        this.m_HandleOrientation = StartCoroutine (this.HandleOnOrientationDevice(orientation));
+	}
+
+    protected virtual IEnumerator HandleOnOrientationDevice(DeviceOrientation orientation)
+    {
+        // LOCK
+        yield return BOARD_LOCK;
+        // DEVICE TO SCREEN
+        Screen.orientation = CGameSetting.DeviceToScreenOrientation (orientation);
+        // LOGIC
+        var heighOffset = 50f;
+        // CALCULATE HEIGH OFFSET
+		if (orientation == DeviceOrientation.LandscapeLeft 
+			|| orientation == DeviceOrientation.LandscapeRight)
+		{
+			heighOffset = LANDSCAPE_SPACING;
+		}
+		else if (orientation == DeviceOrientation.Portrait 
+			|| orientation == DeviceOrientation.PortraitUpsideDown)
+		{
+			heighOffset = PORTRAIT_SPACING;
+		}
+		// UPDATE 
+        for (int i = 0; i < this.m_Columns.Length; i++)
+        {
+            this.m_Columns[i].heighOffset = heighOffset;
+            this.m_Columns[i].RepositionAllCardsNonCallback();
+            // this.m_Columns[i].ReconnectAllCards();
+        }
+    }
+
     public virtual void OnStartDraw()
     {
         var toTransform = this.m_SpawnCardPoint;
-        this.DrawCardsToColumns(54, toTransform);
+        this.DrawCardsToColumns(54, toTransform, (i, card) => {
+            if (i < 45)
+                card.stateCard = CCard.ECardState.FACE_DOWN;
+            else
+                card.stateCard = CCard.ECardState.FACE_UP;
+        });
     }
 
     public virtual void OnNextDraw()
@@ -157,7 +208,9 @@ public class CBoard : MonoBehaviour
         if (BOARD_LOCK)
             return;
         var toTransform = this.m_DrawCardsToColumnsButton.transform;
-        this.DrawCardsToColumns(10, toTransform);
+        this.DrawCardsToColumns(10, toTransform, (i, card) => {
+            card.stateCard = CCard.ECardState.FACE_UP;
+        });
     }
 
     public virtual void OnResetMatch()
@@ -317,7 +370,7 @@ public class CBoard : MonoBehaviour
         }
     }
 
-    public virtual void DrawCardsToColumns(int amount, Transform toTransform)
+    public virtual void DrawCardsToColumns(int amount, Transform toTransform, System.Action<int, CCard> eachCardCallback = null)
     {
         // BLOCK
 		BOARD_LOCK = true;
@@ -329,6 +382,8 @@ public class CBoard : MonoBehaviour
         // DATA
         var delay = 0.1f;
         var moveTime = 0.25f;
+        var columnWait = 0.25f;
+
         var moveType = 0;
         var amountComplete = 0;
         var index = 0;
@@ -341,12 +396,14 @@ public class CBoard : MonoBehaviour
             card.column = column;
             card.connectWithCard = null;
             card.activeCard = true;
+            card.stateCard = CCard.ECardState.FACE_DOWN;
             card.SetParentInCenter (toTransform);
             card.CurveToPosition (
-                    delay * index, 
+                    delay + (index / this.m_Columns.Length * columnWait), 
                     toTransform.InverseTransformPoint (column.GetCardWorldPosition(card)),  
                     moveTime, 
-                    moveType, () => {
+                    moveType, 
+                    () => {
                         card.IsDropOnColumn ();
                         amountComplete++;
                         if (amountComplete == amount)
@@ -357,6 +414,12 @@ public class CBoard : MonoBehaviour
             this.m_OnBoardCards.RemoveAt (0);
             index++;
             maxAmount--;
+            // CALLBACK
+            if (eachCardCallback != null)
+            {
+                eachCardCallback (index, card);
+            }
+            
         }
         this.m_OnBoardCards.TrimExcess ();
     }
@@ -365,7 +428,12 @@ public class CBoard : MonoBehaviour
     {
         // BLOCK
 		BOARD_LOCK = false;
-        this.RefeshColumns();
+        // COLUMNS
+        for (int i = 0; i < this.m_Columns.Length; i++)
+        {
+            this.m_Columns[i].RepositionAllCards();
+            this.m_Columns[i].ReconnectAllCards();
+        }
     }
 
     public virtual void RefeshColumns()

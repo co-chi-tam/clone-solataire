@@ -15,7 +15,13 @@ public class CCard : MonoBehaviour,
 
 	// K, Q, J, 10, 9, 8, 7, 6, 5, 4, 3, 2, A
 	// 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 
-	// 91
+	// sum: 91
+
+	public enum ECardState: int {
+		NONE = 0,
+		FACE_UP = 1,
+		FACE_DOWN = 2
+	}
 
     #region Fields
 
@@ -29,7 +35,11 @@ public class CCard : MonoBehaviour,
 			this.m_ActiveCard = value; 
 			if (this.m_BGImage != null)
 			{
-				this.m_BGImage.color = value ? new Color32 (255, 255, 255, 255) : new Color32 (128, 128, 128, 255);
+				if (this.m_StateCard == ECardState.FACE_UP)
+					this.m_BGImage.color = value ? new Color32 (255, 255, 255, 255) : new Color32 (128, 128, 128, 255);
+				else
+					this.m_BGImage.color = new Color32 (255, 255, 255, 255);
+					
 				this.m_BGImage.raycastTarget = value;
 			}
 		}
@@ -44,6 +54,30 @@ public class CCard : MonoBehaviour,
 			{
 				this.m_BGImage.raycastTarget = value;
 			}
+		}
+	}
+
+	[SerializeField]	protected ECardState m_StateCard = ECardState.FACE_DOWN;
+	public ECardState stateCard 
+	{ 
+		get { return this.m_StateCard; }
+		set 
+		{ 
+			this.m_StateCard = value; 
+			// CARD BACK
+			var cardPath = "Cards/card-back";
+			switch (value)
+			{
+				default:
+				case ECardState.NONE:
+				case ECardState.FACE_DOWN:
+					cardPath = "Cards/card-back";
+					break;
+				case ECardState.FACE_UP:
+					cardPath = string.Format("Cards/Clover/card_{0}_clover", this.m_Value);
+					break;
+			}
+			this.m_BGImage.sprite = CGameSetting.GetSpriteWithPath(cardPath);
 		}
 	}
 
@@ -62,8 +96,9 @@ public class CCard : MonoBehaviour,
 			if (value <= 0 || value > 13)
 				return;
 			this.m_Value = value; 
-			var cardPath = string.Format("Cards/Clover/card_{0}_clover", value);
-			this.m_BGImage.sprite = Resources.Load<Sprite>(cardPath); 
+			// CARD BACK
+			var cardPath = "Cards/card-back";
+			this.m_BGImage.sprite = CGameSetting.GetSpriteWithPath(cardPath);
 		}
 	}
 

@@ -178,14 +178,7 @@ public class CColumn : MonoBehaviour,
 		lock (this.m_Cards)
 		{
 			var allCardsComplete = 0;
-			var nextCard = this.m_Cards[0];
-			nextCard.transform.SetParent(this.m_RectTransform);
-			nextCard.MoveToPosition (this.GetCardPositionWith(0), () => {
-				allCardsComplete++;
-			});
-			nextCard.Clear();
-			var lastCard = this.m_Cards[this.m_Cards.Count - 1];
-			for (int i = 1; i < this.m_Cards.Count; i++)
+			for (int i = 0; i < this.m_Cards.Count; i++)
 			{
 				var card = this.m_Cards[i];
 				card.transform.SetParent(this.m_RectTransform);
@@ -197,8 +190,6 @@ public class CColumn : MonoBehaviour,
 						this.CheckAllCardValues();
 					}
 				});
-				card.Clear();
-				nextCard = card;
 			}
 		}
 	}
@@ -215,7 +206,6 @@ public class CColumn : MonoBehaviour,
 				card.StopMove();
 				card.transform.SetParent(this.m_RectTransform);
 				card.SetPosition (this.GetCardPositionWith(i));
-				card.Clear();
 			}
 			// CHECK VALUES
 			this.CheckAllCardValues();
@@ -264,7 +254,6 @@ public class CColumn : MonoBehaviour,
 			var card = this.m_Cards[i];
 			card.connectWithCard = null;
 			card.IsDropOnColumn(this);
-			card.Clear();
 			card.activeCard = false;
 		}
 		// LAST CARD
@@ -277,7 +266,6 @@ public class CColumn : MonoBehaviour,
 		{
 			var card = this.m_Cards[i];
 			card.IsDropOnColumn(this);
-			card.Clear();
 			if (card.IsCanConnect (nextCard))
 			{
 				// RECONNECT
@@ -471,9 +459,37 @@ public class CColumn : MonoBehaviour,
 
 	public virtual Vector3 GetCardPositionWith(int index)
 	{
-		var lastPosition = CCard.CARD_SIZE;
-		lastPosition.x = 0f; // lastPosition.x / 2f;
-		lastPosition.y = -lastPosition.y / 2f - (index * this.m_HeighOffset);
+		var lastPosition = Vector3.zero;
+		lastPosition.y = -CCard.CARD_SIZE.y / 2f;
+		if (index > this.m_Cards.Count)
+		{
+			lastPosition.x = 0f;
+			lastPosition.y -= index * this.m_HeighOffset;
+		}
+		else
+		{
+			for (int i = 0; i < index; i++)
+			{
+				var card = this.m_Cards[i];
+				if (card != null)
+				{
+					if (card.stateCard == CCard.ECardState.FACE_DOWN)
+					{
+						lastPosition.x = 0f;
+						lastPosition.y -= CBoard.MINIMUM_SPACING;
+					}
+					else
+					{
+						lastPosition.x = 0f;
+						lastPosition.y -= this.m_HeighOffset;
+					}
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
 		return lastPosition;
 	}
 

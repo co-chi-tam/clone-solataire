@@ -7,9 +7,10 @@ using UnityEngine.SceneManagement;
 public class CBoard : MonoBehaviour
 {
     public static int PORTRAIT_MAXIMUM_CARD = 26;
-    public static float PORTRAIT_SPACING = 50f;
+    public static float PORTRAIT_SPACING = 80f;
     public static int LANDSCAPE_MAXIMUM_CARD = 13;
-    public static float LANDSCAPE_SPACING = 30f;
+    public static float LANDSCAPE_SPACING = 60f;
+    public static float MINIMUM_SPACING = 20f;
     
     #region Fields
 
@@ -30,7 +31,6 @@ public class CBoard : MonoBehaviour
     };
 
     protected List <CCard> m_OnBoardCards;
-    protected List <CCard> m_OnHintCards;
 
     protected CReturnBox m_ReturnBox;
 
@@ -51,6 +51,7 @@ public class CBoard : MonoBehaviour
     public static bool BOARD_LOCK = false;
 
     // HINT
+    protected List <object> m_OnHintCards;
     protected bool m_IsActiveHint = false;
 	protected WaitForSeconds m_WaitShortTime = new WaitForSeconds(2f);
     protected Coroutine m_HintCoroutine;
@@ -119,13 +120,13 @@ public class CBoard : MonoBehaviour
             this.m_OnBoardCards.Add (card);
         }
         this.m_ReturnBox.Init();
-        this.m_OnHintCards = new List<CCard>();
+        this.m_OnHintCards = new List<object>();
         // BLOCK
 		CBoard.BOARD_LOCK = true;
 		// ORIENTATION
-		this.CalculateBaseOrientation(Input.deviceOrientation);
-		var orientationManager = GameObject.FindObjectOfType<CUIOrientation>();
-		orientationManager.OnOrientationChange.AddListener (this.CalculateBaseOrientation);
+		// this.CalculateBaseOrientation(Input.deviceOrientation);
+		// var orientationManager = GameObject.FindObjectOfType<CUIOrientation>();
+		// orientationManager.OnOrientationChange.AddListener (this.CalculateBaseOrientation);
         // SHUFFLE
         this.ShuffleCards();
         // On START DRAW
@@ -272,13 +273,13 @@ public class CBoard : MonoBehaviour
             var animActive = false;
             for (int i = 0; i < this.m_OnHintCards.Count; i += 2)
             {
-                var curCard = this.m_OnHintCards[i];
-                var lastCard = this.m_OnHintCards[i + 1];
+                var curCard = this.m_OnHintCards[i] as CCard;
+                var currentColumn = this.m_OnHintCards[i + 1] as CColumn;
+				if (curCard == null || currentColumn == null)
+					continue;
                 animActive = false;
                 curCard.OnBeginDragCard();
-                var heighOffset = lastCard.column != null ? lastCard.column.heighOffset : 50f;
-                var lastPosition = this.m_Group.transform.InverseTransformPoint(lastCard.transform.position);
-                lastPosition.y -= heighOffset;
+                var lastPosition = this.m_Group.transform.InverseTransformPoint(currentColumn.GetLastCardWorldPosition());
                 curCard.MoveToPosition (
                     0.1f, 
                     lastPosition, 
@@ -324,7 +325,6 @@ public class CBoard : MonoBehaviour
             var curAvailableCards = curColumn.availableCards;
             if (curAvailableCards.Count == 0)
             {
-                haveNewPath = true;
                 continue;
             }
             for (int x = 0; x < curAvailableCards.Count; x++)
@@ -339,13 +339,24 @@ public class CBoard : MonoBehaviour
                     var nextColumn = this.m_Columns[i];
                     var nextAvailableCards = nextColumn.availableCards;
                     if (nextAvailableCards.Count == 0)
-                        continue;
-                    var lastCard = nextAvailableCards[0];
-                    if (lastCard.IsCanConnect(curCard))
                     {
-                        haveNewPath = x == (curAvailableCards.Count - 1);
+                        haveNewPath = true;
                         this.m_OnHintCards.Add (curCard);
-                        this.m_OnHintCards.Add (lastCard);
+                        this.m_OnHintCards.Add (nextColumn);
+                        continue;
+                    }
+                    else
+                    {
+                        var lastCard = nextAvailableCards[0];
+                        if (lastCard.IsCanConnect(curCard))
+                        {
+                            if (x == (curAvailableCards.Count - 1))
+                            {
+                                haveNewPath = true;
+                                this.m_OnHintCards.Add (curCard);
+                                this.m_OnHintCards.Add (nextColumn);
+                            }
+                        }
                     }
                 }
             }     
@@ -359,7 +370,7 @@ public class CBoard : MonoBehaviour
             return;
         for (int a = 0; a < amount; a++)
         {
-            for (int i = 0; i < this.m_OnBoardCards.Count; i ++)
+            for (int i = 0; i < this.m_OnBoardCards.Count; i += 1)
             {
                 var random = Random.Range(0, this.m_OnBoardCards.Count);
 
@@ -381,7 +392,7 @@ public class CBoard : MonoBehaviour
         }
         // DATA
         var delay = 0.1f;
-        var moveTime = 0.25f;
+        var moveTime = 0.5f;
         var columnWait = 0.25f;
 
         var moveType = 0;

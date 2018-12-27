@@ -40,7 +40,7 @@ public class CCard : MonoBehaviour,
 				else
 					this.m_BGImage.color = new Color32 (255, 255, 255, 255);
 					
-				this.m_BGImage.raycastTarget = value;
+				this.m_BGImage.raycastTarget = this.m_StateCard == ECardState.FACE_UP;
 			}
 		}
 	}
@@ -52,7 +52,7 @@ public class CCard : MonoBehaviour,
 			this.m_ActiveCard = value; 
 			if (this.m_BGImage != null)
 			{
-				this.m_BGImage.raycastTarget = value;
+				this.m_BGImage.raycastTarget = this.m_StateCard == ECardState.FACE_UP;
 			}
 		}
 	}
@@ -77,7 +77,11 @@ public class CCard : MonoBehaviour,
 					cardPath = string.Format("Cards/Clover/card_{0}_clover", this.m_Value);
 					break;
 			}
-			this.m_BGImage.sprite = CGameSetting.GetSpriteWithPath(cardPath);
+			if (this.m_BGImage != null)
+			{
+				this.m_BGImage.sprite = CGameSetting.GetSpriteWithPath(cardPath);
+				this.m_BGImage.raycastTarget = this.m_StateCard == ECardState.FACE_UP;
+			}
 		}
 	}
 
@@ -263,6 +267,10 @@ public class CCard : MonoBehaviour,
 
 	public virtual bool IsCanConnect(CCard card)
 	{
+		if (this.m_StateCard != ECardState.FACE_UP)
+			return false;
+		if (card.stateCard != ECardState.FACE_UP)
+			return false;
 		return (this.cardValue - 1) == card.cardValue;
 	}
 

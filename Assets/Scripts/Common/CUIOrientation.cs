@@ -29,6 +29,7 @@ public class CUIOrientation : MonoBehaviour
     {
         while (true)
         {
+#if !UNITY_EDITOR && UNITY_ANDROID
             if (Input.deviceOrientation == DeviceOrientation.LandscapeLeft 
                 || Input.deviceOrientation == DeviceOrientation.LandscapeRight
                 || Input.deviceOrientation == DeviceOrientation.Portrait 
@@ -45,6 +46,7 @@ public class CUIOrientation : MonoBehaviour
                     }
                 }
             }
+#endif
             yield return this.m_WaitForFixedUpdate;
         }
     }

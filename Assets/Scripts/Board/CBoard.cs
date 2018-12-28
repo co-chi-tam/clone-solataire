@@ -14,7 +14,11 @@ public class CBoard : MonoBehaviour
     
     #region Fields
 
+    // COLUMNS
     [SerializeField]    protected CColumn[] m_Columns;
+    protected RectTransform m_GroupColumns;
+
+    // CARD DATA
     [SerializeField]    protected CCard m_CardPrefab;
 
     protected int[] m_DataCards = new int[] 
@@ -91,6 +95,7 @@ public class CBoard : MonoBehaviour
 		this.m_RectTransform = this.transform as RectTransform;
         // GROUP
         this.m_Group = GameObject.FindObjectOfType<CGroupCard>();
+        this.m_GroupColumns = this.transform.Find("GroupColumns").GetComponent<RectTransform>();
         // COLUMN
         this.m_Columns = this.transform.GetComponentsInChildren<CColumn>();
         for (int i = 0; i < this.m_Columns.Length; i++)
@@ -172,21 +177,25 @@ public class CBoard : MonoBehaviour
         Screen.orientation = CGameSetting.DeviceToScreenOrientation (orientation);
         // LOGIC
         var heighOffset = 50f;
+        var maximumCards = 23;
         // CALCULATE HEIGH OFFSET
 		if (orientation == DeviceOrientation.LandscapeLeft 
 			|| orientation == DeviceOrientation.LandscapeRight)
 		{
 			heighOffset = LANDSCAPE_SPACING;
+            maximumCards = LANDSCAPE_MAXIMUM_CARD;
 		}
 		else if (orientation == DeviceOrientation.Portrait 
 			|| orientation == DeviceOrientation.PortraitUpsideDown)
 		{
 			heighOffset = PORTRAIT_SPACING;
+            maximumCards = PORTRAIT_MAXIMUM_CARD;
 		}
 		// UPDATE 
         for (int i = 0; i < this.m_Columns.Length; i++)
         {
             this.m_Columns[i].heighOffset = heighOffset;
+            this.m_Columns[i].maximumCards = maximumCards;
             this.m_Columns[i].RepositionAllCardsNonCallback();
             // this.m_Columns[i].ReconnectAllCards();
         }
@@ -212,6 +221,15 @@ public class CBoard : MonoBehaviour
         this.DrawCardsToColumns(10, toTransform, (i, card) => {
             card.stateCard = CCard.ECardState.FACE_UP;
         });
+    }
+
+    public virtual void OnCheckMatchComplete()
+    {
+        if (this.HaveCardsOnColumns() == false 
+            && this.HaveCardsOnBoard() == false)
+        {
+            Debug.LogError ("MATCH COMPLETE");
+        }
     }
 
     public virtual void OnResetMatch()
@@ -473,6 +491,13 @@ public class CBoard : MonoBehaviour
     public virtual Vector3 GetSpawnCardPoint()
     {
         return this.m_SpawnCardPoint.localPosition;
+    }
+
+    public virtual float GetColumnHeight ()
+    {
+        var anchorMinY = this.m_GroupColumns.anchorMin.y;
+        var anchorMaxY = this.m_GroupColumns.anchorMax.y;
+        return Screen.height * (anchorMaxY - anchorMinY);
     }
 
     #endregion

@@ -20,6 +20,13 @@ public class CColumn : MonoBehaviour,
 		set { this.m_HeighOffset = value; }
 	}
 
+	[SerializeField]	protected int m_MaximumCards = 23;
+	public int maximumCards 
+	{ 
+		get { return this.m_MaximumCards; }	
+		set { this.m_MaximumCards = value; }
+	}
+
 	[SerializeField]	protected List<CCard> m_Cards;
 	public List<CCard> cards 
 	{ 
@@ -321,6 +328,7 @@ public class CColumn : MonoBehaviour,
 		this.ChangeFaceLastCard();
 		// BLOCK
 		CBoard.BOARD_LOCK = false;
+		this.m_Board.OnCheckMatchComplete();
 	}
 
 	public virtual bool CheckAllCardValues(ref List<CCard> cardResults)
